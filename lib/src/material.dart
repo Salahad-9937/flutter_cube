@@ -39,8 +39,9 @@ class Material {
 /// Loading material from Material Library File (.mtl).
 /// Reference：http://paulbourke.net/dataformats/mtl/
 ///
-Future<Map<String, Material>> loadMtl(String fileName, {bool isAsset = true}) async {
-  final materials = Map<String, Material>();
+Future<Map<String, Material>> loadMtl(String fileName,
+    {bool isAsset = true}) async {
+  final materials = <String, Material>{};
   String data;
   try {
     if (isAsset) {
@@ -66,25 +67,29 @@ Future<Map<String, Material>> loadMtl(String fileName, {bool isAsset = true}) as
         break;
       case 'Ka':
         if (parts.length >= 4) {
-          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]), double.parse(parts[3]));
+          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]),
+              double.parse(parts[3]));
           material.ambient = v;
         }
         break;
       case 'Kd':
         if (parts.length >= 4) {
-          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]), double.parse(parts[3]));
+          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]),
+              double.parse(parts[3]));
           material.diffuse = v;
         }
         break;
       case 'Ks':
         if (parts.length >= 4) {
-          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]), double.parse(parts[3]));
+          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]),
+              double.parse(parts[3]));
           material.specular = v;
         }
         break;
       case 'Ke':
         if (parts.length >= 4) {
-          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]), double.parse(parts[3]));
+          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]),
+              double.parse(parts[3]));
           material.ke = v;
         }
         break;
@@ -125,11 +130,12 @@ Future<Map<String, Material>> loadMtl(String fileName, {bool isAsset = true}) as
 }
 
 /// load an image from asset
-Future<Image> loadImageFromAsset(String fileName, {bool isAsset = true}) {
+Future<Image> loadImageFromAsset(String fileName, {bool isAsset = false}) {
   final c = Completer<Image>();
   var dataFuture;
   if (isAsset) {
-    dataFuture = rootBundle.load(fileName).then((data) => data.buffer.asUint8List());
+    dataFuture =
+        rootBundle.load(fileName).then((data) => data.buffer.asUint8List());
   } else {
     dataFuture = File(fileName).readAsBytes();
   }
@@ -146,24 +152,27 @@ Future<Image> loadImageFromAsset(String fileName, {bool isAsset = true}) {
 }
 
 /// load texture from asset
-Future<MapEntry<String, Image>?> loadTexture(Material? material, String basePath, {bool isAsset = true}) async {
+Future<MapEntry<String, Image>?> loadTexture(
+    Material? material, String basePath,
+    {bool isAsset = false}) async {
   // get the texture file name
   if (material == null) return null;
-  String fileName = material.mapKa;
-  if (fileName == '') fileName = material.mapKd;
-  if (fileName == '') return null;
+  String fileName = material.mapKa.isNotEmpty ? material.mapKa : material.mapKd;
+  if (fileName.isEmpty) return null;
 
-  // try to load image from asset in subdirectories
+  // Замените обратные слэши на прямые (если это необходимо)
+  fileName = fileName.replaceAll('\\', '/');
+  // Убедитесь, что путь корректно формируется
+  String fullPath = path.join(basePath, fileName);
+
   Image? image;
-  final List<String> dirList = fileName.split(RegExp(r'[/\\]+'));
-  while (dirList.length > 0) {
-    fileName = path.join(basePath, path.joinAll(dirList));
-    try {
-      image = await loadImageFromAsset(fileName, isAsset: isAsset);
-    } catch (_) {}
-    if (image != null) return MapEntry(fileName, image);
-    dirList.removeAt(0);
+  try {
+    image = await loadImageFromAsset(fullPath, isAsset: isAsset);
+    return MapEntry(fullPath, image);
+  } catch (e) {
+    print("Failed to load texture from: $fullPath with error: $e");
   }
+  print("Texture not found at: $fullPath");
   return null;
 }
 
@@ -180,7 +189,8 @@ Future<Uint32List> getImagePixels(Image image) async {
 
 /// Convert Vector3 to Color
 Color toColor(Vector3 v, [double opacity = 1.0]) {
-  return Color.fromRGBO((v.r * 255).toInt(), (v.g * 255).toInt(), (v.b * 255).toInt(), opacity);
+  return Color.fromRGBO(
+      (v.r * 255).toInt(), (v.g * 255).toInt(), (v.b * 255).toInt(), opacity);
 }
 
 /// Convert Color to Vector3
